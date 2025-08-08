@@ -14,13 +14,38 @@ async function main() {
       alias: 'f',
       description: 'The ID of the destination folder in Google Drive',
       type: 'string',
-      demandOption: true,
+      demandOption: false,
+    })
+    .option('list-recordings', {
+      alias: 'L',
+      description: 'List recordings for the given meeting and exit',
+      type: 'boolean',
+      default: false,
+    })
+    .check((args) => {
+      if (!args['list-recordings'] && !args.folderId) {
+        throw new Error('Either provide --folderId to move files or use --list-recordings to only list.');
+      }
+      return true;
     })
     .help()
     .alias('help', 'h').argv;
 
   const auth = await DriveService.getAuthenticatedClient();
   const driveService = new DriveService(auth);
+
+  if (argv['list-recordings']) {
+    const recordings = await driveService.listAllRecordingsForMeeting(argv.meetingId);
+    if (!recordings.length) {
+      console.log('No recordings found.');
+      return;
+    }
+    for (const r of recordings) {
+      const id = r?.driveDestination?.file?.driveFileId || r?.drive_destination?.file?.driveFileId || r?.id || r?.name;
+      console.log(JSON.stringify({ name: r?.name, startTime: r?.startTime, state: r?.state, driveFileId: id }));
+    }
+    return;
+  }
 
   const conferenceRecords = await driveService.listConferenceRecords(argv.meetingId);
 
@@ -34,7 +59,10 @@ async function main() {
     if (recordings) {
       for (const recording of recordings) {
         console.log(`Moving recording: ${recording.name}`);
-        await driveService.moveFile(recording.docId!, argv.folderId as string);
+        await driveService.moveFile(
+          (recording as any)?.driveDestination?.file?.driveFileId || (recording as any)?.drive_destination?.file?.driveFileId || (recording as any)?.docId!,
+          argv.folderId as string
+        );
       }
     }
 
@@ -42,7 +70,7 @@ async function main() {
     if (transcripts) {
       for (const transcript of transcripts) {
         console.log(`Moving transcript: ${transcript.name}`);
-        await driveService.moveFile(transcript.docId!, argv.folderId as string);
+        await driveService.moveFile((transcript as any)?.docsDestination?.document?.documentId || (transcript as any)?.docId!, argv.folderId as string);
       }
     }
   }

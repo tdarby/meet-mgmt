@@ -210,4 +210,16 @@ export class DriveService {
 
     return all;
   }
+
+  // Convenience: list all recordings for a meeting code across its conference records
+  async listAllRecordingsForMeeting(meetingId: string) {
+    const conferenceRecords = await this.listConferenceRecords(meetingId);
+    const aggregated: any[] = [];
+    for (const record of conferenceRecords) {
+      if (!record?.name) continue;
+      const recs = await this.listRecordings(record.name);
+      if (recs?.length) aggregated.push(...recs);
+    }
+    return aggregated;
+  }
 }
