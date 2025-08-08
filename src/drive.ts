@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import * as fs from 'fs';
 import * as path from 'path';
+import { startAuthServer } from './auth-server';
 
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
@@ -28,8 +29,6 @@ export class DriveService {
 
     return oAuth2Client;
   }
-
-  import { startAuthServer } from './auth-server';
 
   private static async getAccessToken(oAuth2Client: OAuth2Client) {
     const authUrl = oAuth2Client.generateAuthUrl({
