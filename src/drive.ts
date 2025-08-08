@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { startAuthServer } from './auth-server';
 
-const SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/meet.readonly'];
+const SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/meetings.readonly'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
 
