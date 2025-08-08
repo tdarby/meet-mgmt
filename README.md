@@ -25,6 +25,16 @@ A tool to manage Google Meet recordings and transcripts.
 
 ## Usage
 
+To run the application, you need to provide the meeting ID and the destination folder ID as command-line arguments:
+
 ```bash
-npm start
+npm start -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 ```
+
+### Finding the Meeting ID
+
+The meeting ID is the last part of the Google Meet link. For example, if your meeting link is `https://meet.google.com/abc-def-ghi`, then your meeting ID is `abc-def-ghi`.
+
+### Finding the Folder ID
+
+The folder ID is the last part of the URL when you have the folder open in Google Drive. For example, if the URL is `https://drive.google.com/drive/folders/1234567890abcdefg`, then your folder ID is `1234567890abcdefg`.
