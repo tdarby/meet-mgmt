@@ -18,7 +18,7 @@ export class DriveService {
   static async getAuthenticatedClient(): Promise<OAuth2Client> {
     const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH).toString());
     const { client_secret, client_id, redirect_uris } = credentials.installed;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, 'http://localhost:3000/oauth2callback');
 
     if (fs.existsSync(TOKEN_PATH)) {
       const token = JSON.parse(fs.readFileSync(TOKEN_PATH).toString());

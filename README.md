@@ -15,6 +15,7 @@ A tool to manage Google Meet recordings and transcripts.
     *   In the Google Cloud Console, go to "APIs & Services" > "Credentials".
     *   Click "Create Credentials" and choose "OAuth client ID".
     *   Select "Desktop app" as the application type.
+    *   Add `http://localhost:3000/oauth2callback` as an authorized redirect URI.
     *   Download the JSON file and save it as `credentials.json` in the root of this project.
 
 3.  **Install Dependencies**
