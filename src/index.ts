@@ -1,4 +1,3 @@
-
 import { DriveService } from './drive';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -23,18 +22,30 @@ async function main() {
   const auth = await DriveService.getAuthenticatedClient();
   const driveService = new DriveService(auth);
 
-  const files = await driveService.listFiles(`name contains '${argv.meetingId}'`);
+  const conferenceRecords = await driveService.listConferenceRecords(argv.meetingId);
 
-  if (!files || files.length === 0) {
-    console.log('No files found for this meeting ID.');
+  if (!conferenceRecords || conferenceRecords.length === 0) {
+    console.log('No conference records found for this meeting ID.');
     return;
   }
 
-  for (const file of files) {
-    console.log(`Moving file: ${file.name}`);
-    await driveService.moveFile(file.id!, argv.folderId as string);
+  for (const conferenceRecord of conferenceRecords) {
+    const recordings = await driveService.listRecordings(conferenceRecord.name!);
+    if (recordings) {
+      for (const recording of recordings) {
+        console.log(`Moving recording: ${recording.name}`);
+        await driveService.moveFile(recording.docId!, argv.folderId as string);
+      }
+    }
+
+    const transcripts = await driveService.listTranscripts(conferenceRecord.name!);
+    if (transcripts) {
+      for (const transcript of transcripts) {
+        console.log(`Moving transcript: ${transcript.name}`);
+        await driveService.moveFile(transcript.docId!, argv.folderId as string);
+      }
+    }
   }
 }
 
 main().catch(console.error);
-
