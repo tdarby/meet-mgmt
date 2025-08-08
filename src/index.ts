@@ -1,9 +1,10 @@
 
 import { DriveService } from './drive';
-import * as yargs from 'yargs';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
 async function main() {
-  const argv = await yargs
+  const argv = await yargs(hideBin(process.argv))
     .option('meetingId', {
       alias: 'm',
       description: 'The ID of the recurring meeting',
@@ -31,7 +32,7 @@ async function main() {
 
   for (const file of files) {
     console.log(`Moving file: ${file.name}`);
-    await driveService.moveFile(file.id!, argv.folderId);
+    await driveService.moveFile(file.id!, argv.folderId as string);
   }
 }
 
