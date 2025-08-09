@@ -48,8 +48,8 @@ async function main() {
       return;
     }
     for (const r of recordings) {
-      const id = (r as any)?.driveDestination?.file?.driveFileId || (r as any)?.drive_destination?.file?.driveFileId || (r as any)?.id || (r as any)?.name;
-      console.log(JSON.stringify({ name: (r as any)?.name, startTime: (r as any)?.startTime, state: (r as any)?.state, driveFileId: id }));
+      const id = await driveService.getRecordingDriveFileId(r);
+      console.log(JSON.stringify({ name: (r as any)?.name, startTime: (r as any)?.startTime, state: (r as any)?.state, driveFileId: id || null }));
     }
     return;
   }
@@ -61,10 +61,12 @@ async function main() {
     if (recordings) {
       for (const recording of recordings) {
         console.log(`Moving recording: ${(recording as any)?.name}`);
-        await driveService.moveFile(
-          (recording as any)?.driveDestination?.file?.driveFileId || (recording as any)?.drive_destination?.file?.driveFileId || (recording as any)?.docId!,
-          argv.folderId as string
-        );
+        const fileId = await driveService.getRecordingDriveFileId(recording);
+        if (!fileId) {
+          console.error('Skipping recording; unable to resolve Drive file ID:', (recording as any)?.name);
+          continue;
+        }
+        await driveService.moveFile(fileId, argv.folderId as string);
       }
     }
 

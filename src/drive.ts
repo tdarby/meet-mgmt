@@ -211,6 +211,54 @@ export class DriveService {
     return all;
   }
 
+  // Fetch a recording by resource name
+  async getRecording(recordingName: string) {
+    const meet = await this.getMeetClient();
+    const res: any = await this.executeWithRetry(
+      () => (meet as any).conferenceRecords.recordings.get({ name: recordingName }),
+      'meet.conferenceRecords.recordings.get'
+    );
+    return res.data;
+  }
+
+  // Extract a Drive file ID from a share/export URL if possible
+  private extractDriveFileIdFromUri(uri: string | undefined): string | undefined {
+    if (!uri) return undefined;
+    try {
+      const url = new URL(uri);
+      // pattern: .../file/d/{id}/...
+      const parts = url.pathname.split('/');
+      const fileIdx = parts.findIndex((p) => p === 'd');
+      if (fileIdx !== -1 && parts[fileIdx + 1]) {
+        return parts[fileIdx + 1];
+      }
+      // pattern: ...?id={id}
+      const idParam = url.searchParams.get('id');
+      if (idParam) return idParam;
+    } catch (_) {
+      // ignore
+    }
+    return undefined;
+  }
+
+  // Resolve the Drive file ID for a recording item, fetching details if needed
+  async getRecordingDriveFileId(recording: any): Promise<string | undefined> {
+    const direct = recording?.driveDestination?.file?.driveFileId || recording?.drive_destination?.file?.driveFileId;
+    if (direct) return direct as string;
+
+    const exportUri = recording?.driveDestination?.exportUri || recording?.drive_destination?.export_uri;
+    const parsed = this.extractDriveFileIdFromUri(exportUri as string | undefined);
+    if (parsed) return parsed;
+
+    const name = recording?.name as string | undefined;
+    if (!name) return undefined;
+    const full = await this.getRecording(name);
+    const directFull = full?.driveDestination?.file?.driveFileId || full?.drive_destination?.file?.driveFileId;
+    if (directFull) return directFull as string;
+    const exportFull = full?.driveDestination?.exportUri || full?.drive_destination?.export_uri;
+    return this.extractDriveFileIdFromUri(exportFull as string | undefined);
+  }
+
   // Convenience: list all recordings for a meeting code across its conference records
   async listAllRecordingsForMeeting(meetingId: string) {
     const conferenceRecords = await this.listConferenceRecords(meetingId);
