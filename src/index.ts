@@ -18,7 +18,12 @@ async function main() {
     })
     .option('list-recordings', {
       alias: 'L',
-      description: 'List recordings for the given meeting and exit',
+      description: 'List recordings and exit',
+      type: 'boolean',
+      default: false,
+    })
+    .option('debug', {
+      description: 'Enable verbose debug logging',
       type: 'boolean',
       default: false,
     })
@@ -34,31 +39,28 @@ async function main() {
   const auth = await DriveService.getAuthenticatedClient();
   const driveService = new DriveService(auth);
 
+  const debug = !!argv.debug;
+
   if (argv['list-recordings']) {
-    const recordings = await driveService.listAllRecordingsForMeeting(argv.meetingId);
+    const recordings = await driveService.listAllRecordingsForMeeting(argv.meetingId as string);
     if (!recordings.length) {
       console.log('No recordings found.');
       return;
     }
     for (const r of recordings) {
-      const id = r?.driveDestination?.file?.driveFileId || r?.drive_destination?.file?.driveFileId || r?.id || r?.name;
-      console.log(JSON.stringify({ name: r?.name, startTime: r?.startTime, state: r?.state, driveFileId: id }));
+      const id = (r as any)?.driveDestination?.file?.driveFileId || (r as any)?.drive_destination?.file?.driveFileId || (r as any)?.id || (r as any)?.name;
+      console.log(JSON.stringify({ name: (r as any)?.name, startTime: (r as any)?.startTime, state: (r as any)?.state, driveFileId: id }));
     }
     return;
   }
 
-  const conferenceRecords = await driveService.listConferenceRecords(argv.meetingId);
-
-  if (!conferenceRecords || conferenceRecords.length === 0) {
-    console.log('No conference records found for this meeting ID.');
-    return;
-  }
-
-  for (const conferenceRecord of conferenceRecords) {
-    const recordings = await driveService.listRecordings(conferenceRecord.name!);
+  // Move flow
+  const processSingleParent = async (parent: string) => {
+    if (debug) console.error('[debug] processing parent:', parent);
+    const recordings = await driveService.listRecordings(parent);
     if (recordings) {
       for (const recording of recordings) {
-        console.log(`Moving recording: ${recording.name}`);
+        console.log(`Moving recording: ${(recording as any)?.name}`);
         await driveService.moveFile(
           (recording as any)?.driveDestination?.file?.driveFileId || (recording as any)?.drive_destination?.file?.driveFileId || (recording as any)?.docId!,
           argv.folderId as string
@@ -66,13 +68,24 @@ async function main() {
       }
     }
 
-    const transcripts = await driveService.listTranscripts(conferenceRecord.name!);
+    const transcripts = await driveService.listTranscripts(parent);
     if (transcripts) {
       for (const transcript of transcripts) {
-        console.log(`Moving transcript: ${transcript.name}`);
+        console.log(`Moving transcript: ${(transcript as any)?.name}`);
         await driveService.moveFile((transcript as any)?.docsDestination?.document?.documentId || (transcript as any)?.docId!, argv.folderId as string);
       }
     }
+  };
+
+  const conferenceRecords = await driveService.listConferenceRecords(argv.meetingId as string);
+
+  if (!conferenceRecords || conferenceRecords.length === 0) {
+    console.log('No conference records found for this meeting ID.');
+    return;
+  }
+
+  for (const conferenceRecord of conferenceRecords) {
+    await processSingleParent(conferenceRecord.name!);
   }
 }
 

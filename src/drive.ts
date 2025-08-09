@@ -152,7 +152,7 @@ export class DriveService {
       const res: any = await this.executeWithRetry(
         () =>
           (meet as any).conferenceRecords.list({
-            filter: `meeting_code='${meetingId}'`,
+            filter: `meeting_code:${meetingId}`,
             pageSize: 100,
             pageToken,
           }),
