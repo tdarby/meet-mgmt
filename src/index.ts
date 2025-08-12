@@ -22,14 +22,20 @@ async function main() {
       type: 'boolean',
       default: false,
     })
+    .option('list-transcripts', {
+      alias: 'T',
+      description: 'List transcripts and exit',
+      type: 'boolean',
+      default: false,
+    })
     .option('debug', {
       description: 'Enable verbose debug logging',
       type: 'boolean',
       default: false,
     })
     .check((args) => {
-      if (!args['list-recordings'] && !args.folderId) {
-        throw new Error('Either provide --folderId to move files or use --list-recordings to only list.');
+      if (!args['list-recordings'] && !args['list-transcripts'] && !args.folderId) {
+        throw new Error('Either provide --folderId to move files or use --list-recordings/--list-transcripts to only list.');
       }
       return true;
     })
@@ -54,6 +60,19 @@ async function main() {
     return;
   }
 
+  if (argv['list-transcripts']) {
+    const transcripts = await driveService.listAllTranscriptsForMeeting(argv.meetingId as string);
+    if (!transcripts.length) {
+      console.log('No transcripts found.');
+      return;
+    }
+    for (const t of transcripts) {
+      const id = await driveService.getTranscriptDocId(t);
+      console.log(JSON.stringify({ name: (t as any)?.name, startTime: (t as any)?.startTime, state: (t as any)?.state, docId: id || null }));
+    }
+    return;
+  }
+
   // Move flow
   const processSingleParent = async (parent: string) => {
     if (debug) console.error('[debug] processing parent:', parent);
@@ -74,7 +93,12 @@ async function main() {
     if (transcripts) {
       for (const transcript of transcripts) {
         console.log(`Moving transcript: ${(transcript as any)?.name}`);
-        await driveService.moveFile((transcript as any)?.docsDestination?.document?.documentId || (transcript as any)?.docId!, argv.folderId as string);
+        const docId = await driveService.getTranscriptDocId(transcript);
+        if (!docId) {
+          console.error('Skipping transcript; unable to resolve document ID:', (transcript as any)?.name);
+          continue;
+        }
+        await driveService.moveFile(docId, argv.folderId as string);
       }
     }
   };

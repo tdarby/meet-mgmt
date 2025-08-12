@@ -221,16 +221,26 @@ export class DriveService {
     return res.data;
   }
 
+  // Fetch a transcript by resource name
+  async getTranscript(transcriptName: string) {
+    const meet = await this.getMeetClient();
+    const res: any = await this.executeWithRetry(
+      () => (meet as any).conferenceRecords.transcripts.get({ name: transcriptName }),
+      'meet.conferenceRecords.transcripts.get'
+    );
+    return res.data;
+  }
+
   // Extract a Drive file ID from a share/export URL if possible
   private extractDriveFileIdFromUri(uri: string | undefined): string | undefined {
     if (!uri) return undefined;
     try {
       const url = new URL(uri);
-      // pattern: .../file/d/{id}/...
+      // pattern: .../file/d/{id}/... or .../document/d/{id}/...
       const parts = url.pathname.split('/');
-      const fileIdx = parts.findIndex((p) => p === 'd');
-      if (fileIdx !== -1 && parts[fileIdx + 1]) {
-        return parts[fileIdx + 1];
+      const dIdx = parts.findIndex((p) => p === 'd');
+      if (dIdx !== -1 && parts[dIdx + 1]) {
+        return parts[dIdx + 1];
       }
       // pattern: ...?id={id}
       const idParam = url.searchParams.get('id');
@@ -259,6 +269,24 @@ export class DriveService {
     return this.extractDriveFileIdFromUri(exportFull as string | undefined);
   }
 
+  // Resolve the Docs documentId for a transcript item, fetching details if needed
+  async getTranscriptDocId(transcript: any): Promise<string | undefined> {
+    const direct = transcript?.docsDestination?.document?.documentId || transcript?.docs_destination?.document?.documentId || transcript?.docId;
+    if (direct) return direct as string;
+
+    const exportUri = transcript?.docsDestination?.exportUri || transcript?.docs_destination?.export_uri;
+    const parsed = this.extractDriveFileIdFromUri(exportUri as string | undefined);
+    if (parsed) return parsed;
+
+    const name = transcript?.name as string | undefined;
+    if (!name) return undefined;
+    const full = await this.getTranscript(name);
+    const directFull = full?.docsDestination?.document?.documentId || full?.docs_destination?.document?.documentId || full?.docId;
+    if (directFull) return directFull as string;
+    const exportFull = full?.docsDestination?.exportUri || full?.docs_destination?.export_uri;
+    return this.extractDriveFileIdFromUri(exportFull as string | undefined);
+  }
+
   // Convenience: list all recordings for a meeting code across its conference records
   async listAllRecordingsForMeeting(meetingId: string) {
     const conferenceRecords = await this.listConferenceRecords(meetingId);
@@ -267,6 +295,18 @@ export class DriveService {
       if (!record?.name) continue;
       const recs = await this.listRecordings(record.name);
       if (recs?.length) aggregated.push(...recs);
+    }
+    return aggregated;
+  }
+
+  // Convenience: list all transcripts for a meeting code across its conference records
+  async listAllTranscriptsForMeeting(meetingId: string) {
+    const conferenceRecords = await this.listConferenceRecords(meetingId);
+    const aggregated: any[] = [];
+    for (const record of conferenceRecords) {
+      if (!record?.name) continue;
+      const trs = await this.listTranscripts(record.name);
+      if (trs?.length) aggregated.push(...trs);
     }
     return aggregated;
   }
