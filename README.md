@@ -38,6 +38,12 @@ npm start -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 npm start -- --meetingId <your-meeting-id> --list-recordings
 ```
 
+- List transcripts for a meeting (no changes to Drive):
+
+```bash
+npm start -- --meetingId <your-meeting-id> --list-transcripts
+```
+
 - Optional verbose logging:
 
 ```bash
@@ -49,6 +55,7 @@ npm start -- --meetingId <your-meeting-id> --list-recordings --debug
 - `--meetingId, -m` (required): The Google Meet code (for example, `abc-def-ghi`). The app looks up conference records using this meeting code.
 - `--folderId, -f` (required only when moving): Destination Google Drive folder ID.
 - `--list-recordings, -L` (optional): Lists recordings for the meeting and exits (does not move files).
+- `--list-transcripts, -T` (optional): Lists transcripts for the meeting and exits (does not move files).
 - `--debug` (optional): Prints additional diagnostic output.
 
 ### Finding the Meeting ID
@@ -72,8 +79,10 @@ npm run dev -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 - Pagination: the tool paginates through all conference records, recordings, and transcripts for the given meeting ID, ensuring large meetings are fully processed.
 - Retries: Google API calls automatically retry with exponential backoff on transient failures (429/5xx, common network errors).
 - Conference record lookup: conference records are discovered automatically via the Meet REST API using `meeting_code:<meetingId>`.
-- Moves, not copies: matching recordings and transcripts are moved into the destination folder when `--folderId` is provided.
-- Recording file ID resolution: recording Drive file IDs are resolved from the Meet API response or derived from the export URL when needed; items that cannot be resolved are skipped with a warning.
+- Moves, not copies: when `--folderId` is provided, both recordings (Drive files) and transcripts (Docs files) are moved into the destination folder.
+- Safe move: if a file is already in the target folder, the app skips moving it. Otherwise, it adds the target as a parent and removes other parents.
+- Recording file ID resolution: recording Drive file IDs are resolved from the Meet API (`driveDestination.file.driveFileId`) or derived from the export URL; if the ID can’t be resolved, the item is skipped with a warning.
+- Transcript document ID resolution: transcript Docs IDs are resolved from the Meet API (`docsDestination.document.documentId`) or derived from the export URL; if the ID can’t be resolved, the item is skipped with a warning.
 
 ## Authentication artifacts
 
@@ -91,4 +100,4 @@ If you change scopes, delete `token.json` to force re-consent.
 
 - If the browser opens for authentication but the app does not proceed, verify that the redirect URI `http://localhost:3000/oauth2callback` is added to your OAuth client and that port 3000 is available locally.
 - If files are not moved, confirm the meeting ID and folder ID are correct and that your account has access to both the recordings/transcripts and the target folder.
-- Use `--list-recordings --debug` to verify that recordings are discovered and to inspect resolved Drive file IDs before moving.
+- Use `--list-recordings --debug` or `--list-transcripts --debug` to verify that items are discovered and to inspect resolved Drive/Docs IDs before moving.
