@@ -44,6 +44,16 @@ npm start -- --meetingId <your-meeting-id> --list-recordings
 npm start -- --meetingId <your-meeting-id> --list-transcripts
 ```
 
+- Filter by date (UTC), format yyyymmdd (applies to list and move flows):
+
+```bash
+# List recordings on a single day
+npm start -- --meetingId <id> --list-recordings --from 20250115 --to 20250115
+
+# Move items for a date range (inclusive)
+npm start -- --meetingId <id> --folderId <folder> --from 20250101 --to 20250131
+```
+
 - Optional verbose logging:
 
 ```bash
@@ -56,6 +66,8 @@ npm start -- --meetingId <your-meeting-id> --list-recordings --debug
 - `--folderId, -f` (required only when moving): Destination Google Drive folder ID.
 - `--list-recordings, -L` (optional): Lists recordings for the meeting and exits (does not move files).
 - `--list-transcripts, -T` (optional): Lists transcripts for the meeting and exits (does not move files).
+- `--from` (optional): Filter start date in UTC, format `yyyymmdd` (e.g., `20250101`).
+- `--to` (optional): Filter end date in UTC, format `yyyymmdd` (e.g., `20250131`).
 - `--debug` (optional): Prints additional diagnostic output.
 
 ### Finding the Meeting ID
@@ -79,6 +91,7 @@ npm run dev -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 - Pagination: the tool paginates through all conference records, recordings, and transcripts for the given meeting ID, ensuring large meetings are fully processed.
 - Retries: Google API calls automatically retry with exponential backoff on transient failures (429/5xx, common network errors).
 - Conference record lookup: conference records are discovered automatically via the Meet REST API using `meeting_code:<meetingId>`.
+- Date filters: when `--from/--to` are provided (UTC `yyyymmdd`), conference records are filtered by `start_time >= from` and `start_time <= to` before listing/moving artifacts.
 - Moves, not copies: when `--folderId` is provided, both recordings (Drive files) and transcripts (Docs files) are moved into the destination folder.
 - Safe move: if a file is already in the target folder, the app skips moving it. Otherwise, it adds the target as a parent and removes other parents.
 - Recording file ID resolution: recording Drive file IDs are resolved from the Meet API (`driveDestination.file.driveFileId`) or derived from the export URL; if the ID can’t be resolved, the item is skipped with a warning.
