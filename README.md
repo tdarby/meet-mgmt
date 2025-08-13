@@ -32,6 +32,12 @@ A tool to manage Google Meet recordings and transcripts.
 npm start -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 ```
 
+- Copy (instead of move) recordings and transcripts into a Drive folder:
+
+```bash
+npm start -- --meetingId <your-meeting-id> --folderId <your-folder-id> --copy
+```
+
 - List recordings for a meeting (no changes to Drive):
 
 ```bash
@@ -44,7 +50,7 @@ npm start -- --meetingId <your-meeting-id> --list-recordings
 npm start -- --meetingId <your-meeting-id> --list-transcripts
 ```
 
-- Filter by date (UTC), format yyyymmdd (applies to list and move flows):
+- Filter by date (UTC), format yyyymmdd (applies to list and move/copy flows):
 
 ```bash
 # List recordings on a single day
@@ -63,9 +69,10 @@ npm start -- --meetingId <your-meeting-id> --list-recordings --debug
 ### Flags
 
 - `--meetingId, -m` (required): The Google Meet code (for example, `abc-def-ghi`). The app looks up conference records using this meeting code.
-- `--folderId, -f` (required only when moving): Destination Google Drive folder ID.
-- `--list-recordings, -L` (optional): Lists recordings for the meeting and exits (does not move files).
-- `--list-transcripts, -T` (optional): Lists transcripts for the meeting and exits (does not move files).
+- `--folderId, -f` (required only when moving/copying): Destination Google Drive folder ID.
+- `--copy, -C` (optional): Copy files into the folder instead of moving.
+- `--list-recordings, -L` (optional): Lists recordings for the meeting and exits (does not move/copy files).
+- `--list-transcripts, -T` (optional): Lists transcripts for the meeting and exits (does not move/copy files).
 - `--from` (optional): Filter start date in UTC, format `yyyymmdd` (e.g., `20250101`).
 - `--to` (optional): Filter end date in UTC, format `yyyymmdd` (e.g., `20250131`).
 - `--debug` (optional): Prints additional diagnostic output.
@@ -91,9 +98,9 @@ npm run dev -- --meetingId <your-meeting-id> --folderId <your-folder-id>
 - Pagination: the tool paginates through all conference records, recordings, and transcripts for the given meeting ID, ensuring large meetings are fully processed.
 - Retries: Google API calls automatically retry with exponential backoff on transient failures (429/5xx, common network errors).
 - Conference record lookup: conference records are discovered automatically via the Meet REST API using `meeting_code:<meetingId>`.
-- Date filters: when `--from/--to` are provided (UTC `yyyymmdd`), conference records are filtered by `start_time >= from` and `start_time <= to` before listing/moving artifacts.
-- Moves, not copies: when `--folderId` is provided, both recordings (Drive files) and transcripts (Docs files) are moved into the destination folder.
-- Safe move: if a file is already in the target folder, the app skips moving it. Otherwise, it adds the target as a parent and removes other parents.
+- Date filters: when `--from/--to` are provided (UTC `yyyymmdd`), conference records are filtered by `start_time >= from` and `start_time <= to` before listing/moving/copying artifacts.
+- Moves or copies: when `--folderId` is provided, recordings (Drive files) and transcripts (Docs files) are moved into or copied to the destination folder depending on `--copy`.
+- Safe move: for moves, if a file is already in the target folder, the app skips moving it. Otherwise, it adds the target as a parent and removes other parents.
 - Recording file ID resolution: recording Drive file IDs are resolved from the Meet API (`driveDestination.file.driveFileId`) or derived from the export URL; if the ID can’t be resolved, the item is skipped with a warning.
 - Transcript document ID resolution: transcript Docs IDs are resolved from the Meet API (`docsDestination.document.documentId`) or derived from the export URL; if the ID can’t be resolved, the item is skipped with a warning.
 
@@ -112,5 +119,5 @@ If you change scopes, delete `token.json` to force re-consent.
 ## Troubleshooting
 
 - If the browser opens for authentication but the app does not proceed, verify that the redirect URI `http://localhost:3000/oauth2callback` is added to your OAuth client and that port 3000 is available locally.
-- If files are not moved, confirm the meeting ID and folder ID are correct and that your account has access to both the recordings/transcripts and the target folder.
-- Use `--list-recordings --debug` or `--list-transcripts --debug` to verify that items are discovered and to inspect resolved Drive/Docs IDs before moving.
+- If files are not moved/copied, confirm the meeting ID and folder ID are correct and that your account has access to both the recordings/transcripts and the target folder.
+- Use `--list-recordings --debug` or `--list-transcripts --debug` to verify that items are discovered and to inspect resolved Drive/Docs IDs before moving/copying.

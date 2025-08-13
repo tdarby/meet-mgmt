@@ -16,6 +16,8 @@ function delay(ms: number) {
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 const RETRYABLE_ERROR_CODES = new Set(['ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN']);
 
+export type DateRange = { startIso: string; endIso: string } | undefined;
+
 export class DriveService {
   private drive;
   // Lazily discovered Meet API client; typed as any due to discovery
@@ -153,16 +155,34 @@ export class DriveService {
     );
   }
 
-  async listConferenceRecords(meetingId: string) {
+  async copyFile(fileId: string, folderId: string) {
+    await this.executeWithRetry(
+      () =>
+        this.drive.files.copy({
+          fileId,
+          requestBody: { parents: [folderId] },
+          fields: 'id, parents',
+        }),
+      'drive.files.copy'
+    );
+  }
+
+  async listConferenceRecords(meetingId: string, dateRange?: DateRange) {
     const meet = await this.getMeetClient();
     const all: any[] = [];
     let pageToken: string | undefined = undefined;
+
+    const filterParts: string[] = [];
+    if (meetingId) filterParts.push(`meeting_code:${meetingId}`);
+    if (dateRange?.startIso) filterParts.push(`start_time >= "${dateRange.startIso}"`);
+    if (dateRange?.endIso) filterParts.push(`start_time <= "${dateRange.endIso}"`);
+    const filter = filterParts.join(' AND ');
 
     do {
       const res: any = await this.executeWithRetry(
         () =>
           (meet as any).conferenceRecords.list({
-            filter: `meeting_code:${meetingId}`,
+            ...(filter ? { filter } : {}),
             pageSize: 100,
             pageToken,
           }),
@@ -298,8 +318,8 @@ export class DriveService {
   }
 
   // Convenience: list all recordings for a meeting code across its conference records
-  async listAllRecordingsForMeeting(meetingId: string) {
-    const conferenceRecords = await this.listConferenceRecords(meetingId);
+  async listAllRecordingsForMeeting(meetingId: string, dateRange?: DateRange) {
+    const conferenceRecords = await this.listConferenceRecords(meetingId, dateRange);
     const aggregated: any[] = [];
     for (const record of conferenceRecords) {
       if (!record?.name) continue;
@@ -310,8 +330,8 @@ export class DriveService {
   }
 
   // Convenience: list all transcripts for a meeting code across its conference records
-  async listAllTranscriptsForMeeting(meetingId: string) {
-    const conferenceRecords = await this.listConferenceRecords(meetingId);
+  async listAllTranscriptsForMeeting(meetingId: string, dateRange?: DateRange) {
+    const conferenceRecords = await this.listConferenceRecords(meetingId, dateRange);
     const aggregated: any[] = [];
     for (const record of conferenceRecords) {
       if (!record?.name) continue;
