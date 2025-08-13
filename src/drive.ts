@@ -129,16 +129,26 @@ export class DriveService {
       'drive.files.get'
     );
 
-    const previousParents = file.data.parents?.length ? file.data.parents.join(',') : undefined;
+    const parents = file.data.parents ?? [];
+    const alreadyInTarget = parents.includes(folderId);
+    const removeList = parents.filter((p: string) => p !== folderId);
+    const removeParents = removeList.length ? removeList.join(',') : undefined;
+    const addParents = alreadyInTarget ? undefined : folderId;
+
+    // If nothing to change, skip
+    if (!removeParents && !addParents) {
+      return;
+    }
 
     await this.executeWithRetry(
       () =>
         this.drive.files.update({
           fileId: fileId,
-          addParents: folderId,
-          removeParents: previousParents,
+          // Only include fields that are needed to avoid 400s
+          ...(addParents ? { addParents } : {}),
+          ...(removeParents ? { removeParents } : {}),
           fields: 'id, parents',
-        }),
+        } as any),
       'drive.files.update'
     );
   }
